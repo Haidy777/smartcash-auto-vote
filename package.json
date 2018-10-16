@@ -1,0 +1,13 @@
+{
+  "name": "smartcash-auto-vote",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "moment": "^2.22.2",
+    "puppeteer": "^1.9.0"
+  }
+}
