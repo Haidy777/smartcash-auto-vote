@@ -10,5 +10,5 @@ module.exports = {
         'SjCqUwBAzfqPMfEGX7Sg9C4LJ1GXe82iGT',
         'Siim7T5zMH3he8xxtQzhmHs4CQSuMrCV1M'
     ],
-    SHOW_CHROME: false
-}
+	HIDE_CHROME: false
+};

@@ -3,7 +3,7 @@ const moment = require('moment');
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 const {EOL} = require('os');
-const config = require('config.js');
+const config = require('./config.js');
 
 function getPercentFromElementHandle (node){
 	return Number($(node).parent()[0].innerHTML.split('</i>')[1].trim().split('%')[0]);
@@ -96,7 +96,7 @@ async function vote(page, id, address, signature, decision) {
 
 (async () => {
 	const browser = await puppeteer.launch({
-		headless: config.SHOW_CHROME
+		headless: config.HIDE_CHROME
 	});
 	const page = await browser.newPage();
 
