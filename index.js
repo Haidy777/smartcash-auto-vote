@@ -3,15 +3,11 @@ const moment = require('moment');
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 const {EOL} = require('os');
+const config = require('config.js');
 
-const VOTE_ADDRESSES = [];// <-- insert your voting addresses here (as strings)
-const SMARTCASH_CLI_PATH = 'smartcash-cli.exe';
-const RPC_PROPS = {
-	user: 'test',
-	password: 'test',
-	port: 9679,
-	host: '127.0.0.1'
-};
+function getPercentFromElementHandle (node){
+	return Number($(node).parent()[0].innerHTML.split('</i>')[1].trim().split('%')[0]);
+}
 
 async function findProposals(page) {
 	await page.goto('https://vote.smartcash.cc/');
@@ -22,10 +18,10 @@ async function findProposals(page) {
 	for (const prop of proposalContainers) {
 		const propTitle = await prop.$eval('.proposal-title > a', node => node.innerHTML);
 		const deadlineMoment = moment(`${await prop.$eval('[data-countdown]', node => node.dataset.countdown)} +0000`, 'YYYY/MM/DD HH:mm:ss Z');
-		const yesVotesPercent = await prop.$eval('.fa-thumbs-up', node => Number($(node).parent()[0].innerHTML.split('</i>')[1].trim().split('%')[0]));//todo function
-		const noVotesPercent = await prop.$eval('.fa-thumbs-down', node => Number($(node).parent()[0].innerHTML.split('</i>')[1].trim().split('%')[0]));//todo function
-		const neutralVotesPercent = await prop.$eval('.fa-hand-paper-o', node => Number($(node).parent()[0].innerHTML.split('</i>')[1].trim().split('%')[0]));//todo function
-		const proposalId = await prop.$eval('.btn-atividade[href^="/Proposal/Details/"]', node => node.href.split('https://vote.smartcash.cc/Proposal/Details/')[1])
+		const yesVotesPercent = await prop.$eval('.fa-thumbs-up', getPercentFromElementHandle);
+		const noVotesPercent = await prop.$eval('.fa-thumbs-down', getPercentFromElementHandle);
+		const neutralVotesPercent = await prop.$eval('.fa-hand-paper-o', getPercentFromElementHandle);
+		const proposalId = await prop.$eval('.btn-atividade[href^="/Proposal/Details/"]', node => node.href.split('https://vote.smartcash.cc/Proposal/Details/')[1]);
 
 		proposals.push({
 			id: proposalId,
@@ -57,8 +53,8 @@ function findDecision({yes, no, neutral}) {
 async function getSignature({id}) {
 	const signatures = [];
 
-	for (const addr of VOTE_ADDRESSES) {
-		const {stdout} = await exec(`${SMARTCASH_CLI_PATH} -rpcconnect=${RPC_PROPS.host} -rpcuser=${RPC_PROPS.user} -rpcpassword=${RPC_PROPS.password} -rpcport=${RPC_PROPS.port} signmessage ${addr} ${id}`);
+	for (const addr of config.VOTE_ADDRESSES) {
+		const {stdout} = await exec(`${config.CLI_PATH} -rpcconnect=${config.RPC.HOST} -rpcport=${config.RPC.PORT} -rpcuser=${config.RPC.USER} -rpcpassword=${config.RPC.PASS} signmessage ${addr} ${id}`);
 
 		signatures.push({addr, signature: JSON.parse(JSON.stringify(stdout.replace(EOL, '')))});
 	}
@@ -71,6 +67,7 @@ async function vote(page, id, address, signature, decision) {
 
 	await page.type('[type=search]', address);
 	await page.waitFor(5000);
+	
 	try {
 		await page.$eval('a[target=_blank].alignLeft', node => node.innerHTML);
 
@@ -99,7 +96,7 @@ async function vote(page, id, address, signature, decision) {
 
 (async () => {
 	const browser = await puppeteer.launch({
-		headless: false
+		headless: config.SHOW_CHROME
 	});
 	const page = await browser.newPage();
 
