@@ -5,7 +5,7 @@ const exec = util.promisify(require('child_process').exec);
 const {EOL} = require('os');
 const config = require('./config.js');
 
-function getPercentFromElementHandle (node){
+function getPercentFromElementHandle(node) {
 	return Number($(node).parent()[0].innerHTML.split('</i>')[1].trim().split('%')[0]);
 }
 
@@ -42,14 +42,6 @@ function findProposalsToConsider(proposals) {
 	});
 }
 
-function findDecision({yes, no, neutral}) {
-	if (neutral >= yes || neutral >= no) {
-		return 2;
-	}
-
-	return yes > no ? 1 : 0;
-}
-
 async function getSignature({id}) {
 	const signatures = [];
 
@@ -62,12 +54,15 @@ async function getSignature({id}) {
 	return signatures;
 }
 
-async function vote(page, id, address, signature, decision) {
-	await page.goto(`https://vote.smartcash.cc/Proposal/Details/${id}`);
+async function vote(page, id, address, signature) {
+	if (page.url().indexOf(id) === -1) {
+		await page.goto(`https://vote.smartcash.cc/Proposal/Details/${id}`);
+	}
 
+	await page.$eval('[type=search]', node => node.value = '');
 	await page.type('[type=search]', address);
 	await page.waitFor(5000);
-	
+
 	try {
 		await page.$eval('a[target=_blank].alignLeft', node => node.innerHTML);
 
@@ -82,11 +77,11 @@ async function vote(page, id, address, signature, decision) {
 		await page.type('input[name=Signature]', signature, {delay: 100});
 		await page.waitFor(2500);
 
-		if (decision === 1) {
+		if (config.DECISION === 'yes') {
 			await page.click('#pnlVote .btn.btn-block.btn-success.btn-lg'); //yes
-		} else if (decision === 0) {
+		} else if (config.DECISION === 'no') {
 			await page.click('#pnlVote .btn.btn-block.btn-danger.btn-lg'); //no
-		} else if (decision === 2) {
+		} else if (config.DECISION === 'abstain') {
 			await page.click('#pnlVote .btn.btn-block.btn-secondary.btn-lg'); //neutral
 		}
 
@@ -103,13 +98,12 @@ async function vote(page, id, address, signature, decision) {
 	const proposals = await findProposals(page);
 
 	for (const prop of proposals) {
-		prop.vote = findDecision(prop);
 		prop.signatures = await getSignature(prop);
 	}
 
 	for (const prop of proposals) {
 		for (const {addr, signature} of prop.signatures) {
-			await vote(page, prop.id, addr, signature, prop.vote);
+			await vote(page, prop.id, addr, signature);
 		}
 	}
 
